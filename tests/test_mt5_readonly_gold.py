@@ -10,19 +10,37 @@ from tradingagents.dataflows.vendors.mt5_readonly import load_frame
 
 
 def _export(tmp_path):
-    bars = {"D1": [
-        {"time": day + "T00:00:00+00:00", "open": 100, "high": 102,
-         "low": 99, "close": 101, "spread": 8}
-        for day in ("2026-10-18", "2026-10-19")
-    ]}
+    bars = {
+        "D1": [
+            {
+                "time": day + "T00:00:00+00:00",
+                "open": 100,
+                "high": 102,
+                "low": 99,
+                "close": 101,
+                "spread": 8,
+            }
+            for day in ("2026-10-18", "2026-10-19")
+        ]
+    }
     path = tmp_path / "gold-mt5-bars.json"
     path.write_text(json.dumps(bars), encoding="utf-8")
-    digest = hashlib.sha256(json.dumps(bars, ensure_ascii=False, sort_keys=True,
-                                      separators=(",", ":")).encode()).hexdigest()
-    (tmp_path / "results.json").write_text(json.dumps({"metadata": {
-        "source": "selected demo account via read-only gateway", "symbol": "XAUUSD",
-        "retrieved_at_utc": "2026-10-20T00:00:00+00:00", "sha256_ohlc_dataset": digest}}),
-        encoding="utf-8")
+    digest = hashlib.sha256(
+        json.dumps(bars, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    (tmp_path / "results.json").write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "source": "selected demo account via read-only gateway",
+                    "symbol": "XAUUSD",
+                    "retrieved_at_utc": "2026-10-20T00:00:00+00:00",
+                    "sha256_ohlc_dataset": digest,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -41,6 +59,5 @@ def test_export_tampering_fails_closed(tmp_path):
     path = _export(tmp_path)
     text = path.read_text(encoding="utf-8")
     path.write_text(text.replace('"close": 101', '"close": 999'), encoding="utf-8")
-    with run_config(gold_config(str(path), str(tmp_path))):
-        with pytest.raises(ValueError, match="hash"):
-            load_frame("XAUUSD", "D1", "2026-10-19")
+    with run_config(gold_config(str(path), str(tmp_path))), pytest.raises(ValueError, match="hash"):
+        load_frame("XAUUSD", "D1", "2026-10-19")
