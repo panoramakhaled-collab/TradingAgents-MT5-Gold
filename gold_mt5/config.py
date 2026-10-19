@@ -5,24 +5,26 @@ from tradingagents.default_config import build_default_config
 
 def gold_config(bars_path: str, results_dir: str) -> dict:
     config = build_default_config()
-    config.update({
-        "mt5_bars_path": bars_path,
-        "results_dir": results_dir,
-        "output_language": "Arabic",
-        "llm_provider": "chatgpt",
-        "quick_think_llm": "gpt-6-luna",
-        "deep_think_llm": "gpt-6-sol",
-        "max_debate_rounds": 1,
-        "max_risk_discuss_rounds": 1,
-        "checkpoint_enabled": False,
-        "disable_memory_settlement": True,
-        "memory_log_path": f"{results_dir}/gold_research_memory.md",
-        "data_vendors": {
-            **config["data_vendors"],
-            "core_stock_apis": "mt5_readonly",
-            "technical_indicators": "mt5_readonly",
-        },
-    })
+    config.update(
+        {
+            "mt5_bars_path": bars_path,
+            "results_dir": results_dir,
+            "output_language": "Arabic",
+            "llm_provider": "chatgpt",
+            "quick_think_llm": "gpt-6-luna",
+            "deep_think_llm": "gpt-6-sol",
+            "max_debate_rounds": 1,
+            "max_risk_discuss_rounds": 1,
+            "checkpoint_enabled": False,
+            "disable_memory_settlement": True,
+            "memory_log_path": f"{results_dir}/gold_research_memory.md",
+            "data_vendors": {
+                **config["data_vendors"],
+                "core_stock_apis": "mt5_readonly",
+                "technical_indicators": "mt5_readonly",
+            },
+        }
+    )
     return config
 
 

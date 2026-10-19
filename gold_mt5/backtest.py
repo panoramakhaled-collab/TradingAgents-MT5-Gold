@@ -11,7 +11,7 @@ import csv
 import json
 import math
 from bisect import bisect_right
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -35,8 +35,9 @@ def _features(frame: pd.DataFrame) -> pd.DataFrame:
     loss = (-delta.clip(upper=0)).ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
     out["rsi"] = 100 - 100 / (1 + gain / loss.replace(0, float("nan")))
     prev = close.shift(1)
-    tr = pd.concat([out["High"] - out["Low"], (out["High"] - prev).abs(),
-                    (out["Low"] - prev).abs()], axis=1).max(axis=1)
+    tr = pd.concat(
+        [out["High"] - out["Low"], (out["High"] - prev).abs(), (out["Low"] - prev).abs()], axis=1
+    ).max(axis=1)
     out["atr"] = tr.ewm(alpha=1 / 14, adjust=False, min_periods=14).mean()
     macd = close.ewm(span=12, adjust=False).mean() - close.ewm(span=26, adjust=False).mean()
     out["macdh"] = macd - macd.ewm(span=9, adjust=False).mean()
@@ -47,27 +48,51 @@ def _completed_index(times: list[datetime], minutes: int, at: datetime) -> int:
     return bisect_right(times, at - timedelta(minutes=minutes)) - 1
 
 
-def _signal(m15: pd.DataFrame, h1: pd.DataFrame, h4: pd.DataFrame,
-            i: int, j: int, k: int) -> int:
+def _signal(m15: pd.DataFrame, h1: pd.DataFrame, h4: pd.DataFrame, i: int, j: int, k: int) -> int:
     bar, prev, hour, trend = m15.iloc[i], m15.iloc[i - 1], h1.iloc[j], h4.iloc[k]
-    needed = [bar.ema20, bar.ema50, bar.rsi, bar.atr, bar.macdh,
-              hour.ema20, hour.ema50, hour.rsi, trend.ema20, trend.ema50, trend.ema200]
+    needed = [
+        bar.ema20,
+        bar.ema50,
+        bar.rsi,
+        bar.atr,
+        bar.macdh,
+        hour.ema20,
+        hour.ema50,
+        hour.rsi,
+        trend.ema20,
+        trend.ema50,
+        trend.ema200,
+    ]
     if any(pd.isna(v) for v in needed):
         return 0
-    long = (trend.Close > trend.ema200 and trend.ema20 > trend.ema50
-            and hour.ema20 > hour.ema50 and 50 < hour.rsi < 72
-            and bar.ema20 > bar.ema50 and prev.Close <= prev.ema20
-            and bar.Close > bar.ema20 and 50 < bar.rsi < 72 and bar.macdh > 0)
-    short = (trend.Close < trend.ema200 and trend.ema20 < trend.ema50
-             and hour.ema20 < hour.ema50 and 28 < hour.rsi < 50
-             and bar.ema20 < bar.ema50 and prev.Close >= prev.ema20
-             and bar.Close < bar.ema20 and 28 < bar.rsi < 50 and bar.macdh < 0)
+    long = (
+        trend.Close > trend.ema200
+        and trend.ema20 > trend.ema50
+        and hour.ema20 > hour.ema50
+        and 50 < hour.rsi < 72
+        and bar.ema20 > bar.ema50
+        and prev.Close <= prev.ema20
+        and bar.Close > bar.ema20
+        and 50 < bar.rsi < 72
+        and bar.macdh > 0
+    )
+    short = (
+        trend.Close < trend.ema200
+        and trend.ema20 < trend.ema50
+        and hour.ema20 < hour.ema50
+        and 28 < hour.rsi < 50
+        and bar.ema20 < bar.ema50
+        and prev.Close >= prev.ema20
+        and bar.Close < bar.ema20
+        and 28 < bar.rsi < 50
+        and bar.macdh < 0
+    )
     return 1 if long else -1 if short else 0
 
 
 def run(bars_path: str, start: str, end: str) -> dict:
-    start_at = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    end_at = datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+    start_at = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=UTC)
+    end_at = datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=UTC) + timedelta(days=1)
     with run_config(gold_config(bars_path, ".")):
         cutoff_day = end_at.strftime("%Y-%m-%d")
         frames = {f: _features(load_frame("XAUUSD", f, cutoff_day)) for f in ("M15", "H1", "H4")}
@@ -122,22 +147,39 @@ def run(bars_path: str, start: str, end: str) -> dict:
         costs = (entry_spread + exit_spread) / 2 + SLIPPAGE_USD_ROUND_TRIP
         gross = side * (exit_price - entry_price)
         net = gross - costs
-        trades.append({"signal_utc": signal_time.isoformat(), "entry_utc": entry.Date.isoformat(),
-                       "exit_utc": exit_bar.Date.isoformat(), "side": "long" if side == 1 else "short",
-                       "entry_reference": round(entry_price, 3),
-                       "exit_reference": round(exit_price, 3),
-                       "stop_reference": round(stop, 3),
-                       "target_reference": round(target, 3),
-                       "risk_usd_per_oz": round(risk_usd, 3), "costs_usd_per_oz": round(costs, 3),
-                       "gross_r": round(gross / risk_usd, 6), "net_r": round(net / risk_usd, 6),
-                       "exit_reason": reason})
+        trades.append(
+            {
+                "signal_utc": signal_time.isoformat(),
+                "entry_utc": entry.Date.isoformat(),
+                "exit_utc": exit_bar.Date.isoformat(),
+                "side": "long" if side == 1 else "short",
+                "entry_reference": round(entry_price, 3),
+                "exit_reference": round(exit_price, 3),
+                "stop_reference": round(stop, 3),
+                "target_reference": round(target, 3),
+                "risk_usd_per_oz": round(risk_usd, 3),
+                "costs_usd_per_oz": round(costs, 3),
+                "gross_r": round(gross / risk_usd, 6),
+                "net_r": round(net / risk_usd, 6),
+                "exit_reason": reason,
+            }
+        )
         i = exit_i + 1  # One position at a time, no overlapping trades.
-    return {"start": start, "end": end, "source": "cached MT5 read-only XAUUSD OHLC candles",
-            "model": "fixed H4/H1/M15 market-momentum-risk proxy, no LLM calls",
-            "assumptions": {"point_usd": POINT_USD, "round_trip_slippage_usd_per_oz": SLIPPAGE_USD_ROUND_TRIP,
-                            "stop_atr_multiple": 1.5, "target_r_multiple": 1.5,
-                            "max_hold_m15_bars": MAX_HOLD_BARS, "stop_first_when_both_hit": True},
-            "trades": trades}
+    return {
+        "start": start,
+        "end": end,
+        "source": "cached MT5 read-only XAUUSD OHLC candles",
+        "model": "fixed H4/H1/M15 market-momentum-risk proxy, no LLM calls",
+        "assumptions": {
+            "point_usd": POINT_USD,
+            "round_trip_slippage_usd_per_oz": SLIPPAGE_USD_ROUND_TRIP,
+            "stop_atr_multiple": 1.5,
+            "target_r_multiple": 1.5,
+            "max_hold_m15_bars": MAX_HOLD_BARS,
+            "stop_first_when_both_hit": True,
+        },
+        "trades": trades,
+    }
 
 
 def _stats(trades: list[dict]) -> dict:
@@ -153,10 +195,14 @@ def _stats(trades: list[dict]) -> dict:
         drawdown = min(drawdown, equity - peak)
     wins = [r for r in rs if r > 0]
     losses = [r for r in rs if r < 0]
-    return {"trades": len(rs), "win_rate": round(len(wins) / len(rs), 4),
-            "mean_net_r": round(sum(rs) / len(rs), 4), "total_net_r": round(sum(rs), 3),
-            "profit_factor": round(sum(wins) / -sum(losses), 3) if losses else None,
-            "max_drawdown_r": round(drawdown, 3)}
+    return {
+        "trades": len(rs),
+        "win_rate": round(len(wins) / len(rs), 4),
+        "mean_net_r": round(sum(rs) / len(rs), 4),
+        "total_net_r": round(sum(rs), 3),
+        "profit_factor": round(sum(wins) / -sum(losses), 3) if losses else None,
+        "max_drawdown_r": round(drawdown, 3),
+    }
 
 
 def main() -> None:
@@ -170,17 +216,38 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     trades = result.pop("trades")
-    midpoint = datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=timezone.utc) + (datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=timezone.utc) - datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=timezone.utc)) / 2
+    midpoint = (
+        datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=UTC)
+        + (
+            datetime.strptime(args.end, "%Y-%m-%d").replace(tzinfo=UTC)
+            - datetime.strptime(args.start, "%Y-%m-%d").replace(tzinfo=UTC)
+        )
+        / 2
+    )
     result["all"] = _stats(trades)
-    result["first_half"] = _stats([t for t in trades if datetime.fromisoformat(t["entry_utc"]) < midpoint])
-    result["second_half"] = _stats([t for t in trades if datetime.fromisoformat(t["entry_utc"]) >= midpoint])
-    (out / "summary.json").write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    result["first_half"] = _stats(
+        [t for t in trades if datetime.fromisoformat(t["entry_utc"]) < midpoint]
+    )
+    result["second_half"] = _stats(
+        [t for t in trades if datetime.fromisoformat(t["entry_utc"]) >= midpoint]
+    )
+    (out / "summary.json").write_text(
+        json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     with (out / "trades.csv").open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=list(trades[0]) if trades else ["signal_utc"])
         writer.writeheader()
         writer.writerows(trades)
-    print(json.dumps({"all": result["all"], "first_half": result["first_half"],
-                      "second_half": result["second_half"]}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                "all": result["all"],
+                "first_half": result["first_half"],
+                "second_half": result["second_half"],
+            },
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":

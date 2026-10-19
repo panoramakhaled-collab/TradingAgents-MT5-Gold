@@ -1,4 +1,5 @@
 """Write a dated local chart annotation, never an order or unattended task."""
+
 import argparse
 import csv
 import json
@@ -13,16 +14,25 @@ def write(snapshot: dict, terminal: Path):
     files.mkdir(parents=True, exist_ok=True)
     asof = datetime.fromisoformat(advanced["as_of_server"]).strftime("%Y.%m.%d %H:%M:%S")
     for frame in ("M5", "M15", "H1", "H4", "D1"):
-        current = plan if frame == "M5" else {"status": "WAIT", "condition": "Context chart; entry model is on M5"}
-        fields = {"status": current["status"], "as_of_server": asof,
-                  "condition": current["condition"].replace(",", ";")}
+        current = (
+            plan
+            if frame == "M5"
+            else {"status": "WAIT", "condition": "Context chart; entry model is on M5"}
+        )
+        fields = {
+            "status": current["status"],
+            "as_of_server": asof,
+            "condition": current["condition"].replace(",", ";"),
+        }
         expiry = current.get("expires_server")
         if expiry:
             fields["expires_server"] = datetime.fromisoformat(expiry).strftime("%Y.%m.%d %H:%M:%S")
         for key in ("entry", "stop", "tp1", "tp2", "tp3"):
             if key in current:
                 fields[key] = current[key]
-        with (files / f"KhaledGoldAdvanced_plan_{frame}.csv").open("w", newline="", encoding="ascii") as f:
+        with (files / f"KhaledGoldAdvanced_plan_{frame}.csv").open(
+            "w", newline="", encoding="ascii"
+        ) as f:
             csv.writer(f).writerows(fields.items())
     print("Dated chart model status written:", plan["status"], asof)
 
