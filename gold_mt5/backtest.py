@@ -69,7 +69,8 @@ def run(bars_path: str, start: str, end: str) -> dict:
     start_at = datetime.strptime(start, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     end_at = datetime.strptime(end, "%Y-%m-%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
     with run_config(gold_config(bars_path, ".")):
-        frames = {f: _features(load_frame("XAUUSD", f, end)) for f in ("M15", "H1", "H4")}
+        cutoff_day = end_at.strftime("%Y-%m-%d")
+        frames = {f: _features(load_frame("XAUUSD", f, cutoff_day)) for f in ("M15", "H1", "H4")}
     m15, h1, h4 = (frames[f] for f in ("M15", "H1", "H4"))
     hour_times, trend_times = h1.Date.tolist(), h4.Date.tolist()
     trades = []
