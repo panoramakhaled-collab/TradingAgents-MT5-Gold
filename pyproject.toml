@@ -31,6 +31,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gold-live = ["mcp>=1.26", "httpx>=0.28"]
+gold-report = ["matplotlib>=3.8"]
 dev = [
     "ruff>=0.16",
     "pytest>=8.0",

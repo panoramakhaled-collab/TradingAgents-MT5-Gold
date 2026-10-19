@@ -1,5 +1,11 @@
 # TradingAgents for read-only MT5 XAUUSD research
 
+The advanced structure upgrade is documented in [ADVANCED_GOLD.md](ADVANCED_GOLD.md).
+It adds a shared causal sweep/BOS/FVG/swing-Fib engine, a three-target demo
+plan descriptor, a chart-only MT5 overlay and matched historical comparison.
+Its performance must be read from the local report; installation does not
+imply a profitable or validated trading edge.
+
 This fork adds a broker spot-gold data adapter to the upstream TradingAgents
 research graph. It accepts a **verified export** from the separate read-only
 MT5 gateway: `gold-mt5-bars.json` plus its `results.json` provenance manifest.

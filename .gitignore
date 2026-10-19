@@ -224,3 +224,4 @@ reports/
 # Local broker-candle experiments, reports and any possible private inputs.
 /results/
 /gold_research_memory.md
+/gold_mt5/mt5/*.ex5
