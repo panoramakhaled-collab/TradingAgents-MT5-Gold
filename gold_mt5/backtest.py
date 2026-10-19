@@ -10,7 +10,6 @@ import argparse
 import csv
 import json
 import math
-import os
 from bisect import bisect_right
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -124,8 +123,10 @@ def run(bars_path: str, start: str, end: str) -> dict:
         net = gross - costs
         trades.append({"signal_utc": signal_time.isoformat(), "entry_utc": entry.Date.isoformat(),
                        "exit_utc": exit_bar.Date.isoformat(), "side": "long" if side == 1 else "short",
-                       "entry_mid": round(entry_price, 3), "exit_mid": round(exit_price, 3),
-                       "stop_mid": round(stop, 3), "target_mid": round(target, 3),
+                       "entry_reference": round(entry_price, 3),
+                       "exit_reference": round(exit_price, 3),
+                       "stop_reference": round(stop, 3),
+                       "target_reference": round(target, 3),
                        "risk_usd_per_oz": round(risk_usd, 3), "costs_usd_per_oz": round(costs, 3),
                        "gross_r": round(gross / risk_usd, 6), "net_r": round(net / risk_usd, 6),
                        "exit_reason": reason})
