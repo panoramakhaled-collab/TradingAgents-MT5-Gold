@@ -221,3 +221,6 @@ __marimo__/
 # Enterprise env file (secrets) and generated run reports
 .env.enterprise
 reports/
+# Local broker-candle experiments, reports and any possible private inputs.
+/results/
+/gold_research_memory.md
