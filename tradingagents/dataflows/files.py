@@ -74,12 +74,12 @@ def _hold_windows(handle, wait: bool = True) -> Iterator[bool]:
             msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK if wait else msvcrt.LK_NBLCK, 1)
             break
         except OSError as exc:
-            if not wait and exc.errno in (errno.EACCES, errno.EDEADLOCK):
-                yield False   # another writer holds it
+            if not wait and exc.errno in (errno.EACCES, getattr(errno, "EDEADLOCK", errno.EDEADLK)):
+                yield False  # another writer holds it
                 return
             # LK_LOCK gives up after about ten seconds of another writer's hold;
             # any other failure is not a wait.
-            if exc.errno != errno.EDEADLOCK:
+            if exc.errno != getattr(errno, "EDEADLOCK", errno.EDEADLK):
                 raise
     try:
         yield True
