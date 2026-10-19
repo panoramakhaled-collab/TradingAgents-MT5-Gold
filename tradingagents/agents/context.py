@@ -124,6 +124,7 @@ def build_instrument_context(
     on the analysis date.
     """
     is_crypto = asset_type == "crypto"
+    is_gold = asset_type == "gold"
     instrument_label = "asset" if is_crypto else "instrument"
     context = (
         f"The {instrument_label} to analyze is `{ticker}`. "
@@ -165,6 +166,12 @@ def build_instrument_context(
         context += (
             " Treat it as a crypto asset rather than a company, and do not "
             "assume company fundamentals are available."
+        )
+    if is_gold:
+        context += (
+            " This is the broker's spot XAUUSD gold quote, not the GC=F futures contract. "
+            "Use only the configured MT5 read-only price data, and do not assume company fundamentals. "
+            "The analysis is research only; never place, modify, or close trades."
         )
     return context
 

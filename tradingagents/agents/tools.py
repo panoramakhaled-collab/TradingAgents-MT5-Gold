@@ -12,6 +12,10 @@ from langgraph.prebuilt import InjectedState
 from tradingagents.dataflows.date_window import as_of, as_of_window
 from tradingagents.dataflows.errors import NoMarketDataError, VendorUnavailableError
 from tradingagents.dataflows.router import no_data_available, route_to_vendor, vendor_unavailable
+from tradingagents.dataflows.router import get_vendor
+from tradingagents.dataflows.vendors.mt5_readonly import (
+    build_verified_market_snapshot as build_mt5_verified_market_snapshot,
+)
 from tradingagents.dataflows.vendors.yahoo.snapshot import build_verified_market_snapshot
 
 
@@ -87,6 +91,8 @@ def get_verified_market_snapshot(
     """
     # An exception out of a tool would end the run.
     try:
+        if get_vendor("core_stock_apis", "get_stock_data") == "mt5_readonly":
+            return build_mt5_verified_market_snapshot(symbol, as_of(curr_date, trade_date), look_back_days)
         return build_verified_market_snapshot(symbol, as_of(curr_date, trade_date), look_back_days)
     except VendorUnavailableError as exc:
         return vendor_unavailable("get_verified_market_snapshot", exc)
