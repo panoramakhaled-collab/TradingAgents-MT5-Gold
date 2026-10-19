@@ -124,7 +124,8 @@ class TradingAgentsGraph:
         path and the CLI call this so the resolved identity reaches the whole
         graph regardless of entry point.
         """
-        identity = resolve_instrument_identity(ticker)
+        # Broker spot gold must not be identified through Yahoo's GC=F future.
+        identity = {} if asset_type == "gold" else resolve_instrument_identity(ticker)
         return build_instrument_context(ticker, asset_type, identity, trade_date)
 
     def _memory_as_of(self, trade_date) -> str | None:
@@ -315,6 +316,8 @@ class TradingAgentsGraph:
         does not end the run: the analysts' work is kept, the lessons already in
         the log are used, and the report says what could not be settled.
         """
+        if self.config.get("disable_memory_settlement"):
+            return {"past_context": "", "memory_note": "Historical settlement disabled for MT5 spot gold research."}
         note = ""
         try:
             # Another run settling the same log does the work; this one goes on.
@@ -359,6 +362,8 @@ class TradingAgentsGraph:
         """Record a finished run: its state log, and its decision in the memory log
         for reflection on the next same-ticker run. propagate() and the CLI both end here."""
         self._log_state(trade_date, final_state)
+        if self.config.get("disable_memory_settlement"):
+            return
         decision = final_state.get("final_trade_decision")
         if not decision:
             logger.warning("No final decision for %s on %s; nothing added to the memory log",
